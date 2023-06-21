@@ -22,6 +22,11 @@
 
 #define MARROW_VERSION "0.0.3"
 
+enum modes {
+    NORMAL = 0,
+    EDIT,
+};
+
 struct workspaceConfig {
     struct termios terminal;
     int activetab;
@@ -30,6 +35,7 @@ struct workspaceConfig {
     int rows;
     int cols;
     int keypress;
+    int mode;
 } workspaceConfig;
 
 struct workspaceConfig global;
@@ -109,15 +115,18 @@ int getWindowSize(int *rows, int *cols) {
 }
 
 void initWorkspace(void) {
-    global.activetab = 0;
+    global.activetab = -1;
     global.numtabs = 0;
     global.tabs = NULL;
     global.rows = 0;
     global.cols = 0;
     global.keypress = 0;
+    global.mode = NORMAL;
 
     if (getWindowSize(&global.rows, &global.cols) == -1)
         die("getWindowSize");
+
+    global.rows--;
 }
 
 void render(void) {
@@ -127,7 +136,7 @@ void render(void) {
     abAppend(&ab, "\x1b[H", 3);
 
     // Render screen
-    if (!global.activetab) {
+    if (global.activetab == -1) {
         int y;
         for (y = 0; y < global.rows; y++) {
             if (y == global.rows / 2) {
@@ -152,7 +161,7 @@ void render(void) {
         }
     } else {
         // Render current tab for now
-        // drawTab(new.tabs[new.activetab], ab);
+        drawTab(global.tabs[global.activetab], &ab);
     }
 
     abAppend(&ab, "\x1b[?25h", 6);
@@ -161,24 +170,27 @@ void render(void) {
     abFree(&ab);
 }
 
+void normal(int key) {
+    switch (key) {}
+}
+
 int main(int argc, char *argv[]) {
     enableRawMode();
     initWorkspace();
 
     if (argc >= 2) {
         struct tab new = tabOpen(argv[1], global.rows, global.cols);
-        // workspaceInsertTab(0, new);
-        // workspaceActiveTab(0);
+        workspaceInsertTab(0, new);
+        workspaceActiveTab(0);
     }
 
-    /*
     while (1) {
         render();
         global.keypress = editorReadKey();
-        if (global.keypress == CTRL_KEY('q'))
-            break;
+        if (global.mode == NORMAL) {
+            normal(global.keypress);
+        }
     }
-    */
 
     return 0;
 }

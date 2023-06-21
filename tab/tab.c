@@ -37,8 +37,7 @@ void tabUpdateRow(struct row *r) {
         if (r->chars[j] == '\t')
             tabs++;
 
-    if (r->render)
-        free(r->render);
+    free(r->render);
     r->render = malloc(r->size + tabs * (MARROW_TAB_STOP - 1) + 1);
 
     int idx = 0;
@@ -51,6 +50,8 @@ void tabUpdateRow(struct row *r) {
             r->render[idx++] = r->chars[j];
         }
     }
+    r->render[idx] = '\0';
+    r->rsize = idx;
 }
 
 void tabInsertRow(struct tab *t, int at, char *s, size_t len) {
@@ -73,7 +74,7 @@ void tabInsertRow(struct tab *t, int at, char *s, size_t len) {
     t->rows[at].rsize = 0;
     t->rows[at].render = NULL;
 
-    // tabUpdateRow(&t->rows[at]);
+    tabUpdateRow(&t->rows[at]);
 
     t->numrows++;
 }
@@ -129,6 +130,18 @@ void drawTab(struct tab t, struct abuf *ab) {
         if (filerow >= t.numrows) {
             abAppend(ab, "~", 1);
         } else {
+            int len = t.rows[filerow].rsize - t.coloff;
+            if (len < 0)
+                len = 0;
+            if (len > t.screencols)
+                len = t.screencols;
+            char *c = &t.rows[filerow].render[t.coloff];
+            int j;
+            for (j = 0; j < len; j++) {
+                abAppend(ab, &c[j], 1);
+            }
         }
+        abAppend(ab, "\x1b[K", 3);
+        abAppend(ab, "\r\n", 2);
     }
 }
