@@ -28,6 +28,8 @@ struct tab {
     time_t statusmsg_time;
 } tab;
 
+void tabScroll(struct tab *t);
+
 void tabUpdateRow(struct row *r);
 
 void tabInsertRow(struct tab t, int at, char *s, size_t len);
@@ -36,6 +38,8 @@ void tabFreeRow(struct row *r);
 
 struct tab tabOpen(char *filename, int screenrows, int screencols);
 
-void drawTab(struct tab t, struct abuf *ab);
+void drawTab(struct tab *t, struct abuf *ab);
+
+void tabNormalMode(struct tab *t, int key);
 
 #endif

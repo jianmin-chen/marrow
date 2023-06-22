@@ -1,6 +1,7 @@
 #include "../buffer/buffer.h"
 #include "../config.h"
 #include "../error/error.h"
+#include "../keyboard/keyboard.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +30,32 @@ struct tab {
     char statusmsg[80];
     time_t statusmsg_time;
 } tab;
+
+/*** row operations ***/
+
+int rowCxToRx(struct row *r, int cx) {
+    int rx = 0;
+    int j;
+    for (j = 0; j < cx; j++) {
+        if (r->chars[j] == '\t')
+            rx += (MARROW_TAB_STOP - 1) - (rx % MARROW_TAB_STOP);
+        rx++;
+    }
+    return rx;
+}
+
+int rowRxToCx(struct row *r, int rx) {
+    int cur_rx = 0;
+    int cx;
+    for (cx = 0; cx < r->size; cx++) {
+        if (r->chars[cx] == '\t')
+            cur_rx += (MARROW_TAB_STOP - 1) - (cur_rx % MARROW_TAB_STOP);
+        cur_rx++;
+        if (cur_rx > rx)
+            return cx;
+    }
+    return cx;
+}
 
 void tabUpdateRow(struct row *r) {
     int tabs = 0;
@@ -123,19 +150,36 @@ struct tab tabOpen(char *filename, int screenrows, int screencols) {
     return new;
 }
 
-void drawTab(struct tab t, struct abuf *ab) {
+void tabScroll(struct tab *t) {
+    t->rx = t->cx;
+    if (t->cy < t->numrows)
+        t->rx = rowCxToRx(&t->rows[t->cy], t->cx);
+
+    if (t->cy < t->rowoff)
+        t->rowoff = t->cy;
+    if (t->cy >= t->rowoff + t->screenrows)
+        t->rowoff = t->cy - t->screenrows + 1;
+    if (t->rx < t->coloff)
+        t->coloff = t->rx;
+    if (t->rx >= t->coloff + t->screencols)
+        t->coloff = t->rx - t->screencols + 1;
+}
+
+void drawTab(struct tab *t, struct abuf *ab) {
+    tabScroll(t);
+
     int y;
-    for (y = 0; y < t.screenrows; y++) {
-        int filerow = y + t.rowoff;
-        if (filerow >= t.numrows) {
+    for (y = 0; y < t->screenrows; y++) {
+        int filerow = y + t->rowoff;
+        if (filerow >= t->numrows) {
             abAppend(ab, "~", 1);
         } else {
-            int len = t.rows[filerow].rsize - t.coloff;
+            int len = t->rows[filerow].rsize - t->coloff;
             if (len < 0)
                 len = 0;
-            if (len > t.screencols)
-                len = t.screencols;
-            char *c = &t.rows[filerow].render[t.coloff];
+            if (len > t->screencols)
+                len = t->screencols;
+            char *c = &t->rows[filerow].render[t->coloff];
             int j;
             for (j = 0; j < len; j++) {
                 abAppend(ab, &c[j], 1);
@@ -144,4 +188,47 @@ void drawTab(struct tab t, struct abuf *ab) {
         abAppend(ab, "\x1b[K", 3);
         abAppend(ab, "\r\n", 2);
     }
+
+    char buf[32];
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (t->cy - t->rowoff) + 1,
+             (t->rx - t->coloff) + 1);
+    abAppend(ab, buf, strlen(buf));
+}
+
+void tabNormalMode(struct tab *t, int key) {
+    struct row *r = (t->cy >= t->numrows) ? NULL : &t->rows[t->cy];
+
+    switch (key) {
+    case ARROW_LEFT:
+        if (t->cx != 0) {
+            t->cx--;
+        } else if (t->cy > 0) {
+            t->cy--;
+            t->cx = t->rows[t->cy].size;
+        }
+        break;
+    case ARROW_RIGHT:
+        if (r && t->cx < r->size) {
+            t->cx++;
+        } else if (r && t->cx == r->size) {
+            t->cy++;
+            t->cx = 0;
+        }
+        break;
+    case ARROW_UP:
+        if (t->cy != 0) {
+            t->cy--;
+        }
+        break;
+    case ARROW_DOWN:
+        if (t->cy < t->numrows) {
+            t->cy++;
+        }
+        break;
+    }
+
+    r = (t->cy >= t->numrows) ? NULL : &t->rows[t->cy];
+    int rowlen = r ? r->size : 0;
+    if (t->cx > rowlen)
+        t->cx = rowlen;
 }

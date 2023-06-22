@@ -22,10 +22,7 @@
 
 #define MARROW_VERSION "0.0.3"
 
-enum modes {
-    NORMAL = 0,
-    EDIT,
-};
+enum modes { NORMAL = 0, EDIT, FILETREE, TERMINAL };
 
 struct workspaceConfig {
     struct termios terminal;
@@ -132,6 +129,7 @@ void initWorkspace(void) {
 void render(void) {
     struct abuf ab = ABUF_INIT;
 
+    // Hide cursor, move to top left
     abAppend(&ab, "\x1b[?25l", 6);
     abAppend(&ab, "\x1b[H", 3);
 
@@ -161,17 +159,28 @@ void render(void) {
         }
     } else {
         // Render current tab for now
-        drawTab(global.tabs[global.activetab], &ab);
+        drawTab(&global.tabs[global.activetab], &ab);
     }
 
-    abAppend(&ab, "\x1b[?25h", 6);
+    abAppend(&ab, "\x1b[?25h", 6); // Show cursor again
 
     write(STDIN_FILENO, (&ab)->b, (&ab)->len);
     abFree(&ab);
 }
 
-void normal(int key) {
-    switch (key) {}
+void process(int key) {
+    switch (key) {
+    case CTRL_KEY('q'):
+        exit(0);
+    default:
+        if (global.mode == NORMAL) {
+            tabNormalMode(&global.tabs[global.activetab], key);
+        }
+    }
+}
+
+void update(void) {
+    // Save the current tab
 }
 
 int main(int argc, char *argv[]) {
@@ -187,9 +196,8 @@ int main(int argc, char *argv[]) {
     while (1) {
         render();
         global.keypress = editorReadKey();
-        if (global.mode == NORMAL) {
-            normal(global.keypress);
-        }
+        process(global.keypress);
+        update();
     }
 
     return 0;
