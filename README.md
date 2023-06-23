@@ -1,3 +1,7 @@
+## TODO
+
+- [ ] Fix yo structs
+
 ## About
 
 Text editor written from scratch using the [Build Your Own Text Editor](https://viewsourcecode.org/snaptoken/kilo/) tutorial. Wanted to make it my own (in fact, this was written with `marrow`!), so I've added/am adding some extra, opinionated features.
