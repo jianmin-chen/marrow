@@ -2,9 +2,9 @@
 #define _BSD_SOURCE
 #define _GNU_SOURCE
 
-#include "./buffer/buffer.h"
 #include "./config.h"
 #include "./keyboard/keyboard.h"
+#include "./libs/buffer.h"
 #include "./modes.h"
 #include "./status/error.h"
 #include "./status/status.h"
