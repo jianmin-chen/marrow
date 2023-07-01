@@ -2,6 +2,7 @@
 #include "../highlight/highlight.h"
 #include "../keyboard/keyboard.h"
 #include "../libs/buffer.h"
+#include "../libs/re.h"
 #include "../modes.h"
 #include "../status/error.h"
 #include "../status/status.h"
@@ -338,6 +339,8 @@ void tabSave(tab *t) {
 }
 
 void tabBackup(tab *t) {
+    // ? I think we should backup the keypresses instead? So you can revert
+    // ? keypresses but also backup at the same time
     if (t->swp) {
         // Save to swap file
         int len;
@@ -526,7 +529,6 @@ void tabFindCallback(tab *t, char *query, int key) {
     if (key == '\r' || key == '\x1b') {
         last_match = -1;
         direction = 1;
-        return;
     } else if (key == ARROW_RIGHT || key == ARROW_DOWN) {
         direction = 1;
     } else if (key == ARROW_LEFT || key == ARROW_UP) {
@@ -540,6 +542,11 @@ void tabFindCallback(tab *t, char *query, int key) {
         direction = 1;
     int current = last_match;
     int i;
+
+    re_t pattern = re_compile(query);
+    int match_length;
+    int match_idx;
+
     for (i = 0; i < t->numrows; i++) {
         current += direction;
         if (current == -1)
@@ -548,11 +555,12 @@ void tabFindCallback(tab *t, char *query, int key) {
             current = 0;
 
         row *r = &t->rows[current];
-        char *match = strstr(r->render, query);
-        if (match) {
+        match_idx = re_matchp(pattern, r->render, &match_length);
+
+        if (match_idx != -1) {
             last_match = current;
             t->cy = current;
-            t->cx = rowRxToCx(r, match - r->render);
+            t->cx = rowRxToCx(r, &r->render[match_idx] - r->render);
             t->rowoff = t->numrows;
 
             /*

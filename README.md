@@ -1,7 +1,5 @@
 ## TODO
 
-- [ ] Get find working
-- [ ] Get regex integrated with find
 - [ ] `zz` to center, other commands you normally use in Vim (`dd`)
 - [ ] Get syntax highlighting working
 - [ ] Get backup (binary) and save working
