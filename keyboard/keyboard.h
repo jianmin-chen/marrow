@@ -16,6 +16,7 @@ enum keys {
     K = 107,
     L = 108,
     W = 119,
+    Z = 122,
     BACKSPACE = 127,
     ARROW_LEFT = 1000,
     ARROW_RIGHT,
@@ -29,5 +30,12 @@ enum keys {
 };
 
 int editorReadKey(void);
+
+typedef struct keypress {
+    int key;
+    struct keypress *next;
+} keypress;
+
+keypress *addKeystroke(int key, keypress *ptr);
 
 #endif

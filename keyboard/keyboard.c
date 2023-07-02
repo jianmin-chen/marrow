@@ -1,5 +1,6 @@
 #include "../status/error.h"
 #include <errno.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #define CTRL_KEY(k) ((k)&0x1f)
@@ -17,6 +18,7 @@ enum keys {
     K = 107,
     L = 108,
     W = 119,
+    Z = 122,
     BACKSPACE = 127,
     ARROW_LEFT = 1000,
     ARROW_RIGHT,
@@ -98,7 +100,27 @@ int editorReadKey(void) {
     }
 }
 
-typedef struct {
-    int *keys;
-    int strokes;
-} keystrokes;
+// Storing keypresses in a stack
+typedef struct keypress {
+    int key;
+    struct keypress *next;
+} keypress;
+
+keypress *addKeystroke(int key, keypress *ptr) {
+    keypress *k = malloc(sizeof(keypress));
+    k->key = key;
+    k->next = ptr;
+    return k;
+}
+
+keypress *lastKeystroke(keypress *ptr) {
+    // Get last keystroke and then remove from stack
+    keypress *k = ptr;
+    ptr = ptr->next;
+    return k; // Make sure to free this!
+}
+
+char *stringKeystroke(keypress *ptr) {
+    // Convert stack of keystrokes to string
+    return "";
+}

@@ -1,8 +1,9 @@
 ## TODO
 
+- [ ] Get backup (keypresses) and save working
+- [ ] Get tabs to remain the same when user goes to next line
 - [ ] `zz` to center, other commands you normally use in Vim (`dd`)
 - [ ] Get syntax highlighting working
-- [ ] Get backup (binary) and save working
 - [ ] Get tab system working, `;` and Ctrl+number to move between tabs
 - [ ] Get line numbers working
 - [ ] Get Git gutters working
