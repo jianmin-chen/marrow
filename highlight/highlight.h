@@ -41,4 +41,6 @@ int syntaxToColor(colors *theme, int hl);
 
 syntax *selectSyntaxHighlight(char *filename, char *filetype);
 
+void loadTheme(char *name);
+
 #endif
