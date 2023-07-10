@@ -421,7 +421,7 @@ void dirty(tab *t, int key) {
     t->dirty++;
     if (t->dirty % 5 == 0) {
         // Every five changes save
-        tabBackup(t);
+        // tabBackup(t);
     }
 }
 
@@ -621,7 +621,7 @@ void tabJumpTo(tab *t, int line) {
 void tabCommand(tab *t, char *buf, int key) {
     int jump = 1;
     for (unsigned long i = 0; i < strlen(buf); i++) {
-        if (!isnumber(buf[i])) {
+        if (!isdigit(buf[i])) {
             jump = -1;
             break;
         }
