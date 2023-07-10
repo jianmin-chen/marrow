@@ -1,4 +1,3 @@
-#include "../highlight/highlight.h"
 #include "../keyboard/keyboard.h"
 #include "../libs/buffer.h"
 #include <ctype.h>

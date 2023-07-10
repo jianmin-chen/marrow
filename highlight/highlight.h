@@ -1,6 +1,8 @@
 #ifndef HIGHLIGHT_H
 #define HIGHLIGHT_H
 
+#include "../status/status.h"
+
 typedef struct colors {
     int background;
     int normal;
@@ -39,8 +41,8 @@ int is_separator(int c);
 
 int syntaxToColor(colors *theme, int hl);
 
-syntax *selectSyntaxHighlight(char *filename, char *filetype);
+syntax *selectSyntaxHighlight(char *filetype);
 
-void loadTheme(char *name);
+void loadTheme(status *s, char *name);
 
 #endif

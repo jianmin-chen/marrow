@@ -1,6 +1,8 @@
 #include "../status/error.h"
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #define CTRL_KEY(k) ((k)&0x1f)
@@ -12,6 +14,7 @@ enum keys {
     SLASH = 47,
     ZERO = 48,
     COLON = 58,
+    D = 100,
     H = 104,
     I = 105,
     J = 106,
@@ -106,21 +109,36 @@ typedef struct keypress {
     struct keypress *next;
 } keypress;
 
-keypress *addKeystroke(int key, keypress *ptr) {
-    keypress *k = malloc(sizeof(keypress));
-    k->key = key;
-    k->next = ptr;
-    return k;
+typedef struct keypresses {
+    keypress *last;
+    int length;
+} keypresses;
+
+void *addKeystroke(int key, keypresses *k) {
+    keypress *stroke = malloc(sizeof(keypress));
+    stroke->key = key;
+    if (k == NULL)
+        stroke->next = NULL;
+    else
+        stroke->next = k->last;
+    k->last = stroke;
+    k->length++;
 }
 
-keypress *lastKeystroke(keypress *ptr) {
+keypress *lastKeystroke(keypresses *ptr) {
     // Get last keystroke and then remove from stack
-    keypress *k = ptr;
-    ptr = ptr->next;
+    keypress *k = ptr->last;
+    ptr->last = k->next;
     return k; // Make sure to free this!
 }
 
-char *stringKeystroke(keypress *ptr) {
+char *stringKeystroke(keypresses *ptr) {
     // Convert stack of keystrokes to string
-    return "";
+    char *s;
+    keypress *stroke = ptr->last;
+    while (stroke != NULL) {
+        snprintf(s, strlen(s) + sizeof(int) + 2, "%s,%i", s, stroke->key);
+        stroke = stroke->next;
+    }
+    return s;
 }

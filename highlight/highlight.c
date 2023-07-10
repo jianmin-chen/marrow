@@ -1,6 +1,7 @@
 #include "../config.h"
 #include "../libs/ini.h"
 #include "../status/error.h"
+#include "../status/status.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,16 +65,17 @@ char *CSS_keywords[] = {"accent-color", "acos", "abs|"};
 char *HTML_extensions[] = {".html", ".ejs", NULL};
 char *HTML_keywords[] = {NULL};
 
-char *JS_extensions[] = {".js", ".ts", ".cjs", ".mjs", NULL};
+char *JS_extensions[] = {".js", ".ts", ".cjs", ".mjs", ".tsx", ".jsx", NULL};
 char *JS_keywords[] = {
-    "await",    "break",      "case",    "catch",   "class",      "const",
-    "continue", "debugger",   "default", "delete",  "do",         "else",
-    "enum",     "export",     "extends", "finally", "for",        "function",
-    "if",       "implements", "import",  "in",      "instanceof", "interface",
-    "let",      "new",        "package", "private", "protected",  "public",
-    "return",   "super",      "switch",  "static",  "this",       "throw",
-    "try",      "true",       "typeof",  "var",     "void",       "while",
-    "with",     "yield",      "false|",  "null|",   "true|",      NULL};
+    "await",     "break",    "case",       "catch",   "class",   "const",
+    "continue",  "debugger", "default",    "delete",  "do",      "else",
+    "enum",      "export",   "extends",    "finally", "for",     "function",
+    "from",      "if",       "implements", "import",  "in",      "instanceof",
+    "interface", "let",      "new",        "package", "private", "protected",
+    "public",    "return",   "super",      "switch",  "static",  "this",
+    "throw",     "try",      "true",       "typeof",  "var",     "void",
+    "while",     "with",     "yield",      "false|",  "null|",   "true|",
+    NULL};
 
 char *PY_extensions[] = {".py", NULL};
 char *PY_keywords[] = {"await",
@@ -85,6 +87,7 @@ char *PY_keywords[] = {"await",
                        "in",
                        "raise",
                        "True",
+                       "False",
                        "class",
                        "finally",
                        "is",
@@ -109,7 +112,6 @@ char *PY_keywords[] = {"await",
                        "if",
                        "or",
                        "yield"
-                       "False|",
                        "None|",
                        "str|",
                        "int|",
@@ -173,37 +175,24 @@ int syntaxToColor(colors *theme, int hl) {
     }
 }
 
-syntax *selectSyntaxHighlight(char *filename, char *filetype) {
-    if (filename == NULL)
+syntax *selectSyntaxHighlight(char *filetype) {
+    if (!filetype)
         return NULL;
 
-    syntax *s;
-    s->filetype = NULL;
-    s->filematch = NULL;
-    s->keywords = NULL;
-    s->singlelineCommentStart = NULL;
-    s->multilineCommentStart = NULL;
-    s->multilineCommentEnd = NULL;
-
-    s->filetype = filetype;
-
-    char *ext = strrchr(filename, '.');
     for (unsigned int j = 0; j < HLDB_ENTRIES; j++) {
-        // Go through each HLDB entry to check which one matches
+        // Go through HLDB entry to check which one matches
         syntax *curr = &HLDB[j];
         unsigned int i = 0;
         while (curr->filematch[i]) {
             int is_ext = (curr->filematch[i][0] == '.');
-            if ((is_ext && ext && !strcmp(ext, curr->filematch[i])) ||
-                (!is_ext && strstr(filename, curr->filematch[i]))) {
-                s = curr;
-                return s;
+            if ((is_ext && !strcmp(filetype, curr->filematch[i]))) {
+                return curr;
             }
             i++;
         }
     }
 
-    return s;
+    return NULL;
 }
 
 int handler(void *c, const char *section, const char *name, const char *value) {
@@ -226,10 +215,21 @@ int handler(void *c, const char *section, const char *name, const char *value) {
     return 0;
 }
 
-void loadTheme(char *name) {
+void loadTheme(status *s, char *name) {
+    static char *src;
+    if (src == NULL) {
+        src = getenv("MARROW_DIR");
+        if (src == NULL) {
+            setStatusMessage(s, "Cannot load themes until MARROW_DIR is set");
+            return;
+        }
+        snprintf(src, strlen(src) + strlen("/highlight/themes.ini") + 1,
+                 "%s/highlight/themes.ini", src);
+    }
+
     themeName = name;
 
-    if (ini_parse(HL_HIGHLIGHT_LOCATION, handler, &theme) < 0) {
+    if (ini_parse(src, handler, &theme) < 0) {
         die("Unable to load theme");
     }
 }

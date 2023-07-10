@@ -34,6 +34,7 @@ typedef struct tab {
     int screenrows;
     int screencols;
     int dirty;
+    int quit_times;
 } tab;
 
 void tabScroll(tab *t);

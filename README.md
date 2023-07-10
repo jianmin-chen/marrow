@@ -3,7 +3,6 @@
 - [ ] Get backup (keypresses) and save working
 - [ ] Get tabs to remain the same when user goes to next line
 - [ ] `zz` to center, other commands you normally use in Vim (`dd`)
-- [ ] Get syntax highlighting working
 - [ ] Get tab system working, `;` and Ctrl+number to move between tabs
 - [ ] Get line numbers working
 - [ ] Get Git gutters working
@@ -13,6 +12,9 @@
 - [ ] Get terminal emulator working
 - [ ] Get multiple terminal system up and running
 - [ ] Clean up, test out for a few weeks and add/remove features as needed
+- [ ] Format on save (Prettier for web stuff, clang-format for C and C++, and Black for Python)
+- [ ] Soft wrap choice
+- [ ] Resizing sucks
 
 ## About
 

@@ -36,7 +36,7 @@ typedef struct tab {
     row *rows;
     status *bar;
     syntax *syn;
-    keypress *keystrokes;
+    keypresses *keystrokes;
     int cx, cy;
     int rx;
     int rowoff;
@@ -49,7 +49,7 @@ typedef struct tab {
 /*** prototypes ***/
 
 void tabUpdateRow(tab *t, row *r);
-void dirty(tab *t);
+void dirty(tab *t, int key);
 void tabBackup(tab *t);
 char *tabPrompt(tab *t, char *prompt, void (*render)(void),
                 void (*callback)(tab *t, char *, int), int onchange);
@@ -109,6 +109,9 @@ void tabRowAppendString(tab *t, row *r, char *s, size_t len) {
 /*** syntax related row operations ***/
 
 void tabUpdateSyntax(tab *t, row *r) {
+    if (!t->syn)
+        return;
+
     r->hl = realloc(r->hl, r->rsize);
     memset(r->hl, HL_NORMAL, r->rsize);
 
@@ -148,6 +151,9 @@ void tabUpdateSyntax(tab *t, row *r) {
                     i += mce_len;
                     in_comment = 0;
                     prev_sep = 1;
+                    continue;
+                } else {
+                    i++;
                     continue;
                 }
             } else if (!strncmp(&r->render[i], mcs, mcs_len)) {
@@ -294,7 +300,6 @@ void tabDelRow(tab *t, int at) {
     for (int j = at; j < t->numrows - 1; j++)
         t->rows[j].idx--;
     t->numrows--;
-    dirty(t);
 }
 
 void tabInsertNewline(tab *t) {
@@ -353,8 +358,8 @@ tab tabOpen(char *filename, int screenrows, int screencols, status *s) {
     strcat(new.swp, "-");
     strcat(new.swp, new.filename);
     strcat(new.swp, ".swp");
-    new.syn = selectSyntaxHighlight(new.filename, new.filetype);
-    new.keystrokes = NULL;
+    new.syn = selectSyntaxHighlight(new.filetype);
+    new.keystrokes = malloc(sizeof(keypresses));
     new.numrows = 0;
     new.rows = NULL;
     new.bar = s;
@@ -411,7 +416,8 @@ char *tabRowsToString(tab *t, int *buflen) {
     return buf;
 }
 
-void dirty(tab *t) {
+void dirty(tab *t, int key) {
+    addKeystroke(key, t->keystrokes);
     t->dirty++;
     if (t->dirty % 5 == 0) {
         // Every five changes save
@@ -444,8 +450,26 @@ void tabSave(tab *t) {
 }
 
 void tabBackup(tab *t) {
-    // ? I think we should backup the keypresses instead? So you can revert
-    // ? keypresses but also backup at the same time
+    if (t->swp) {
+        // Save to swap file
+        char *buf = stringKeystroke(t->keystrokes);
+        int len = strlen(buf) + 1;
+
+        int fd = open(t->swp, O_RDWR | O_CREAT, 0644);
+        if (fd != -1) {
+            if (ftruncate(fd, len) != -1) {
+                if (write(fd, buf, len) == len) {
+                    close(fd);
+                    free(buf);
+                    return;
+                }
+            }
+            close(fd);
+        }
+        free(buf);
+        setStatusMessage(t->bar, "Can't backup! I/O error: %s",
+                         strerror(errno));
+    }
 }
 
 void tabScroll(tab *t) {
@@ -494,7 +518,7 @@ void drawTab(tab *t, abuf *ab) {
                                             current_color);
                         abAppend(ab, buf, clen);
                     }
-                } else {
+                } else if (t->syn) {
                     int color = syntaxToColor(theme, hl[j]);
                     if (color != current_color) {
                         current_color = color;
@@ -503,6 +527,8 @@ void drawTab(tab *t, abuf *ab) {
                             snprintf(buf, sizeof(buf), "\x1b[%dm", color);
                         abAppend(ab, buf, clen);
                     }
+                    abAppend(ab, &c[j], 1);
+                } else {
                     abAppend(ab, &c[j], 1);
                 }
             }
@@ -612,7 +638,7 @@ void tabCommand(tab *t, char *buf, int key) {
             for (unsigned int j = 9; j < strlen(buf); j++) {
                 theme[j - 9] = buf[j];
             }
-            loadTheme(theme);
+            loadTheme(t->bar, theme);
         }
 
         while (buf[i]) {
@@ -621,12 +647,24 @@ void tabCommand(tab *t, char *buf, int key) {
             if (c == 'w') {
                 tabSave(t);
             } else if (c == 'q') {
-                write(STDOUT_FILENO, "\x1b[2J", 4);
-                write(STDOUT_FILENO, "\x1b[H", 3);
-                exit(0);
+                if (buf[0] == '!' || !t->dirty) {
+                    write(STDOUT_FILENO, "\x1b[2J", 4);
+                    write(STDOUT_FILENO, "\x1b[H", 3);
+                    exit(0);
+                } else {
+                    setStatusMessage(
+                        t->bar,
+                        "No write since last change (add ! to override)");
+                }
             }
             i++;
         }
+    }
+}
+
+void tabDelete(tab *t, char *buf, int key) {
+    if (strcmp(buf, "d") == 0) {
+        tabDelRow(t, t->cy);
     }
 }
 
@@ -804,6 +842,8 @@ int tabNormalMode(tab *t, int key, void (*render)(void)) {
     case L:
         tabMoveCursor(t, key);
         break;
+    case D:
+        tabPrompt(t, "d", render, tabDelete, 1);
     case I:
         setStatusMessage(t->bar, "Switching to EDIT");
         return EDIT;
@@ -853,14 +893,14 @@ int tabEditMode(tab *t, int key, void (*render)(void)) {
         if (key == DEL_KEY)
             tabMoveCursor(t, ARROW_RIGHT);
         tabDelChar(t);
-        dirty(t);
+        dirty(t, key);
         break;
     case '\r':
         tabInsertNewline(t);
         break;
     default:
         tabInsertChar(t, key);
-        dirty(t);
+        dirty(t, key);
         break;
     }
     return EDIT;
