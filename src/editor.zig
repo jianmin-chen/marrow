@@ -4,18 +4,26 @@ const c = @cImport({
     @cInclude("ft.h");
 });
 const std = @import("std");
-const Config = @import("config.zig");
+const cellui = @import("cellui");
+const Config = @import("config");
 
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 const panic = std.debug.panic;
 
+const Pane = @import("panes/pane.zig");
+const RootPane = @import("panes/root.zig");
 const Document = @import("panes/document/document.zig");
 
 const Self = @This();
 
 allocator: Allocator,
 config: Config,
-open: ?Document = null,
+
+// There is always a root pane that represents the window.
+// The root pane is responsible for rendering status bar, debug info,
+// and passing down state through the pane tree presumably.
+root_pane: *Pane,
 
 window: ?*c.GLFWwindow = null,
 width: ?c_int = null,
@@ -26,24 +34,25 @@ pub fn from(allocator: Allocator) !Self {
     defer args.deinit();
     _ = args.skip();
 
+    const self: Self = .{
+        .allocator = allocator,
+        .config = Config.default(),
+        .root_pane = try Pane.init(allocator, try RootPane.init(allocator))
+    };
+
     if (args.next()) |path| {
-        return .{
-            .allocator = allocator,
-            .config = Config.default(),
-            .open = try Document.from(allocator, path)
-        };
+        _ = path;
+        // self.pane_tree = try Pane.init(allocator, try Document.from(allocator, path));
+        return self;
     }
 
-    return .{
-        .allocator = allocator,
-        .config = Config.default()
-    };
+    return self;
 }
 
 pub fn deinit(self: *Self) void {
-    if (self.open) |document| {
-        @constCast(&document).deinit();
-    }
+    self.root_pane.deinit();
+    self.allocator.destroy(self.root_pane);
+    cellui.cleanup();
 }
 
 pub fn run(self: *Self) !void {
@@ -77,6 +86,12 @@ pub fn run(self: *Self) !void {
     c.glEnable(c.GL_BLEND);
     c.glBlendFunc(c.GL_SRC_ALPHA, c.GL_ONE_MINUS_SRC_ALPHA);
 
+    try cellui.setup(self.allocator);
+    cellui.scale(
+        @floatFromInt(self.config.initial_width),
+        @floatFromInt(self.config.initial_height)
+    );
+
     try self.loop();
 }
 
@@ -84,6 +99,8 @@ fn loop(self: *Self) !void {
     while (c.glfwWindowShouldClose(self.window) == 0) {
         c.glClearColor(40.0 / 255.0, 44.0 / 255.0, 52.0 / 255.0, 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
+
+        try self.root_pane.render(&self.config);
 
         c.glfwSwapBuffers(self.window);
         c.glfwPollEvents();

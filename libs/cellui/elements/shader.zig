@@ -11,9 +11,10 @@ const Self = @This();
 
 program: c_uint,
 
-// Some default object bindings.
-default_vao: c_uint,
-default_vbo: c_uint,
+// Some default buffer objects.
+vbo: c_uint,
+vao: c_uint,
+ebo: c_uint,
 
 pub fn init(vertex_shader_source: []const u8, fragment_shader_source: []const u8) !Self {
     var success: c_int = undefined;
@@ -27,8 +28,7 @@ pub fn init(vertex_shader_source: []const u8, fragment_shader_source: []const u8
     c.glGetShaderiv(vertex_shader, c.GL_COMPILE_STATUS, &success);
     if (success == c.GL_FALSE) {
         c.glGetShaderInfoLog(vertex_shader, 512, null, info_log);
-        const log: [*:0]const u8 = std.mem.span(info_log);
-        panic("Error compiling vertex shader: {s}\n", .{log});
+        // panic("Error compiling vertex shader: {s}\n", .{info_log});
     }
 
     const fragment_shader = c.glCreateShader(c.GL_FRAGMENT_SHADER);
@@ -39,8 +39,7 @@ pub fn init(vertex_shader_source: []const u8, fragment_shader_source: []const u8
     c.glGetShaderiv(fragment_shader, c.GL_COMPILE_STATUS, &success);
     if (success == c.GL_FALSE) {
         c.glGetShaderInfoLog(fragment_shader, 512, null, info_log);
-        const log: [*:0]const u8 = std.mem.span(info_log);
-        panic("Error compiling fragment shader: {s}\n", .{log});
+        // panic("Error compiling fragment shader: {s}\n", .{info_log});
     }
 
     const shader_program = c.glCreateProgram();
@@ -51,26 +50,26 @@ pub fn init(vertex_shader_source: []const u8, fragment_shader_source: []const u8
     c.glGetProgramiv(shader_program, c.GL_LINK_STATUS, &success);
     if (success == c.GL_FALSE) {
         c.glGetProgramInfoLog(shader_program, 512, null, info_log);
-        const log: [*:0]const u8 = std.mem.span(info_log);
-        panic("Program linking failed. {s}\n", .{log});
+        // panic("Program linking failed. {s}\n", .{info_log});
     }
 
     var vbo: c_uint = undefined;
     var vao: c_uint = undefined;
+    var ebo: c_uint = undefined;
 
     c.glGenVertexArrays(1, &vao);
     c.glGenBuffers(1, &vbo);
+    c.glGenBuffers(1, &ebo);
 
     return .{
         .program = shader_program,
-        .default_vao = vao,
-        .default_vbo = vbo
+        .vbo = vbo,
+        .vao = vao,
+        .ebo = ebo
     };
 }
 
 pub fn deinit(self: *Self) void {
-    c.glDeleteVertexArrays(1, &self.default_vao);
-    c.glDeleteBuffers(1, &self.default_vbo);
     c.glDeleteProgram(self.program);
 }
 

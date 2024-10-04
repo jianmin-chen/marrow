@@ -1,6 +1,6 @@
 const std = @import("std");
 const Editor = @import("editor.zig");
-const config = @import("config.zig");
+const config = @import("config");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

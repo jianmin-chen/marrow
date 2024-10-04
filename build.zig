@@ -30,16 +30,33 @@ pub fn build(b: *Build) !void {
 
     attachDependencies(b, exe);
 
+    const config = b.addModule("config", .{
+        .root_source_file = b.path("src/config.zig")
+    });
+    exe.root_module.addImport("config", config);
+
     const string = b.addModule("string", .{
         .root_source_file = b.path("libs/string.zig")
     });
-
     exe.root_module.addImport("string", string);
+
+    const cellui = b.addModule("cellui", .{
+        .root_source_file = b.path("libs/cellui/root.zig"),
+        .target = target
+    });
+    cellui.addIncludePath(Build.LazyPath{ .cwd_relative = "/opt/homebrew/Cellar/glfw/3.4/include" });
+    cellui.addLibraryPath(Build.LazyPath{ .cwd_relative = "/opt/homebrew/Cellar/glfw/3.4/lib" });
+    cellui.addIncludePath(Build.LazyPath{ .cwd_relative = "/opt/homebrew/Cellar/freetype/2.13.3/include/freetype2/" });
+    cellui.addLibraryPath(Build.LazyPath{ .cwd_relative = "/opt/homebrew/Cellar/freetype/2.13.3/lib" });
+    cellui.addIncludePath(b.path("./deps"));
+    cellui.linkFramework("OpenGL", .{});
+    cellui.linkSystemLibrary("glfw", .{});
+    cellui.linkSystemLibrary("freetype", .{});
+    exe.root_module.addImport("cellui", cellui);
 
     b.installArtifact(exe);
 
     const run_exe = b.addRunArtifact(exe);
-
     if (b.args) |args| {
         run_exe.addArgs(args);
     }

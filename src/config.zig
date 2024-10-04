@@ -13,6 +13,8 @@ initial_width: c_int = 888,
 initial_height: c_int = 888,
 initial_name: []const u8 = "Marrow",
 
+debug: bool = true,
+
 pub fn default() Self {
     return .{};
 }

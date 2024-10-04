@@ -12,7 +12,7 @@ pub fn from(allocator: Allocator, slice: []const u8) !*Self {
     const self = try allocator.create(Self);
     self.* = .{
         .allocator = allocator,
-        .string = try String.from(allocator, std.mem.trim(u8, slice, '\n'))
+        .string = try String.from(allocator, std.mem.trim(u8, slice, "\n"))
     };
     return self;
 }
