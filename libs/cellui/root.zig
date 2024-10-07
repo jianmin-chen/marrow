@@ -16,14 +16,13 @@ pub fn setup(allocator: Allocator) !void {
 }
 
 pub fn scale(width: f32, height: f32) void {
-    const projection = math.Matrix.ortho(0, width, 0, height);
-    _ = projection;
-    // c.glUniformMatrix4fv(
-    //     Box.shader.uniform("projection"),
-    //     1,
-    //     c.GL_FALSE,
-    //     @ptrCast(&projection)
-    // );
+    const projection = math.Matrix.ortho(0, width, height, 0);
+    c.glUniformMatrix4fv(
+        Box.shader.uniform("projection"),
+        1,
+        c.GL_FALSE,
+        @ptrCast(&projection)
+    );
 }
 
 pub fn cleanup() void {

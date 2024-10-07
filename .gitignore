@@ -3,3 +3,6 @@
 .zig-cache
 zig-cache
 zig-out
+
+test.zig
+test.*

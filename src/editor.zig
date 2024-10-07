@@ -55,6 +55,10 @@ pub fn deinit(self: *Self) void {
     cellui.cleanup();
 }
 
+fn resize(_: ?*c.GLFWwindow, width: c_int, height: c_int) callconv(.C) void {
+    c.glViewport(0, 0, width, height);
+}
+
 pub fn run(self: *Self) !void {
     defer self.deinit();
 
@@ -78,6 +82,7 @@ pub fn run(self: *Self) !void {
         panic("Error creating GLFW window.\n", .{});
     }
     c.glfwMakeContextCurrent(self.window);
+    _ = c.glfwSetFramebufferSizeCallback(self.window, resize);
 
     if (c.gladLoadGLLoader(@ptrCast(&c.glfwGetProcAddress)) == c.GL_FALSE)
         panic("Error initializing GLAD.\n", .{});
@@ -96,9 +101,19 @@ pub fn run(self: *Self) !void {
 }
 
 fn loop(self: *Self) !void {
+    var prev = c.glfwGetTime();
+    var frames: isize = 0;
     while (c.glfwWindowShouldClose(self.window) == 0) {
-        c.glClearColor(40.0 / 255.0, 44.0 / 255.0, 52.0 / 255.0, 1.0);
+        c.glClearColor(self.config.editor_background[0], self.config.editor_background[1], self.config.editor_background[2], 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
+
+        const timestamp = c.glfwGetTime();
+        frames += 1;
+        if (timestamp - prev >= 1.0) {
+            std.debug.print("{any}\n", .{frames});
+            frames = 0;
+            prev = timestamp;
+        }
 
         try self.root_pane.render(&self.config);
 
